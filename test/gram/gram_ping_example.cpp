@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include "common/module.hpp"
 #include "gram/client.hpp"
@@ -24,6 +25,14 @@ int main(const int argc, char const *const argv[])
 			std::cerr << globus::gram::error(error) << std::endl;
 			return EXIT_FAILURE;
 		}
+
+		const std::string version(client.jobmanager_version());
+		if (version.empty())
+		{
+			std::cerr << "failed to get version string of job manager." << std::endl;
+			return EXIT_FAILURE;
+		}
+		std::cout << version << std::endl;
 	}
 	catch (const std::exception &e)
 	{

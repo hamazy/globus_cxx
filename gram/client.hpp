@@ -5,7 +5,12 @@
 #ifndef GLOBUS_CXX_GRAM_CLIENT_HPP_
 #define GLOBUS_CXX_GRAM_CLIENT_HPP_
 
+#include <functional>
+
 #include "globus_gram_client.h"
+#include "globus_gram_protocol.h"
+
+#include "common/util.hpp"
 
 namespace globus { namespace gram {
 
@@ -259,6 +264,25 @@ public:
 	error_code ping() const
 	{
 		return static_cast<error_code>(::globus_gram_client_ping(contact_.to_string()));
+	}
+
+	std::string jobmanager_version() const
+	{
+		globus_hashtable_t extensions(0);
+		const int result(
+			::globus_gram_client_get_jobmanager_version(
+				contact_.to_string(), &extensions));
+		if (result != GLOBUS_SUCCESS) return std::string();
+		::globus_gram_protocol_extension_t *extension_value =
+			  reinterpret_cast< ::globus_gram_protocol_extension_t *>(
+				  ::globus_hashtable_lookup(
+					  &extensions,
+					  const_cast<char *>("toolkit-version")));
+		
+		globus::util::on_exit<std::pointer_to_unary_function< ::globus_hashtable_t *,void> > destruction(
+		 	std::ptr_fun(::globus_gram_protocol_hash_destroy), &extensions);
+		if (extension_value == 0) return std::string();
+		return std::string(extension_value->value);
 	}
 
 private:
