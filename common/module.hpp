@@ -8,7 +8,6 @@
 #include <sstream>
 
 #include "globus_common.h"
-#include "globus_gram_client.h"
 
 #include "common/error.hpp"
 
