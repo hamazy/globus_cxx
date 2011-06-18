@@ -191,6 +191,9 @@ public:
 	resource_manager_contact(char const *const contact)
 		: contact_(contact) {}
 
+	resource_manager_contact(resource_manager_contact const &src)
+		: contact_(src.contact_) {}
+
 	char const *const to_string() const
 	{
 		return contact_.c_str();
@@ -244,15 +247,27 @@ std::ostream &operator<<(std::ostream &stream, error const &exception)
 	return stream;
 }
 
-namespace client {
-
-bool ping (const resource_manager_contact &contact, error_code &e)
+class client
 {
-	e = static_cast<error_code>(::globus_gram_client_ping(contact.to_string()));
-	return e == no_error;
-}
+	resource_manager_contact const contact_;
+public:
+	client(resource_manager_contact const &contact)
+		:contact_(contact) {}
 
-} // namespace client
+	virtual ~client() {}
+
+	error_code ping() const
+	{
+		return static_cast<error_code>(::globus_gram_client_ping(contact_.to_string()));
+	}
+
+private:
+	client();
+	client(client const &src);
+	client &operator=(client const &src);
+
+};
+
 } // namespace gram
 } // namespace globus
 

@@ -14,9 +14,10 @@ int main(const int argc, char const *const argv[])
 	try
 	{
 		globus::module gram_client_module(*GLOBUS_GRAM_CLIENT_MODULE);
-		globus::gram::error_code error = globus::gram::no_error;
-		globus::gram::client::ping(
-			globus::gram::resource_manager_contact(argv[1]), error); // synchronous call
+
+		globus::gram::resource_manager_contact contact(argv[1]);
+		globus::gram::client client(contact);
+		globus::gram::error_code const error(client.ping()); // synchronous call
 
 		if (error)
 		{
