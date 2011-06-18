@@ -20,7 +20,7 @@ int main(const int argc, char const *const argv[])
 
 		if (error)
 		{
-			std::cerr << globus::gram::error(error).to_string() << std::endl;
+			std::cerr << globus::gram::error(error) << std::endl;
 			return EXIT_FAILURE;
 		}
 	}

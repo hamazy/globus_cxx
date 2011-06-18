@@ -238,6 +238,12 @@ public:
 	}
 };
 
+std::ostream &operator<<(std::ostream &stream, error const &exception)
+{
+	stream << exception.to_string();
+	return stream;
+}
+
 namespace client {
 
 bool ping (const resource_manager_contact &contact, error_code &e)
