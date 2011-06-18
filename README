@@ -1,0 +1,15 @@
+globus_cxx
+==========
+
+Build
+-----
+
+ $ autoreconf -if
+ $ LIBRARY_PATH=/opt/gt5/lib ./configure
+ $ CPLUS_INCLUDE_PATH=/opt/gt5/include/gcc32dbgpthr C_INCLUDE_PATH=/opt/gt5/include/gcc32dbgpthr LIBRARY_PATH=/opt/gt5/lib make
+
+Run
+---
+
+ $ cd test/gram
+ $ LD_LIBRARY_PATH=/opt/gt5/lib ./gram_ping_example `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local 

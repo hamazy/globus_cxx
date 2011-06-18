@@ -1,0 +1,4 @@
+SUBDIRS = \
+	common \
+	gram \
+	test
