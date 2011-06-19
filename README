@@ -1,15 +1,19 @@
 globus_cxx
 ==========
 
+This is intended to be a thin C++ wrapper for C API of Globus Toolkit.
+
 Build
 -----
 
  $ autoreconf -if
- $ LIBRARY_PATH=/opt/gt5/lib ./configure
- $ CPLUS_INCLUDE_PATH=/opt/gt5/include/gcc32dbgpthr C_INCLUDE_PATH=/opt/gt5/include/gcc32dbgpthr LIBRARY_PATH=/opt/gt5/lib make
+ $ CXXFLAGS="-g -O0 -Wall -Weffc++" LIBRARY_PATH=/opt/gt5/lib ./configure
+ $ CPLUS_INCLUDE_PATH=/opt/gt5/include/gcc32dbgpthr LIBRARY_PATH=/opt/gt5/lib make
 
 Run
 ---
+
+ $ grid-proxy-init
 
  $ cd test/gram
  $ LD_LIBRARY_PATH=/opt/gt5/lib ./gram_ping_example `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local 
