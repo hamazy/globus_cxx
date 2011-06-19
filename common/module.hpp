@@ -20,7 +20,7 @@ public:
 	module(::globus_module_descriptor_t &module_descriptor)
 		: module_descriptor_(module_descriptor)
 	{
-		const int result(::globus_module_activate(&module_descriptor_));
+		int const result(::globus_module_activate(&module_descriptor_));
 		if (result != GLOBUS_SUCCESS)
 		{
 			std::stringstream msg;
@@ -32,7 +32,7 @@ public:
 
 	~module()
 	{
-		const int result(globus_module_deactivate(&module_descriptor_));
+		int const result(globus_module_deactivate(&module_descriptor_));
 		if (result != GLOBUS_SUCCESS)
 		{
 			std::stringstream msg;

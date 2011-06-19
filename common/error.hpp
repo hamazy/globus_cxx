@@ -10,9 +10,9 @@ namespace globus
 
 class module_exception: public std::exception
 {
-	const std::string string_;
+	std::string const string_;
 public:
-	module_exception(char const *const string)
+	module_exception(char const *string)
 		: string_(string) {}
 
 	module_exception(std::string const &string)

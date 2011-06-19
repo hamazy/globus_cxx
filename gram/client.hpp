@@ -188,18 +188,18 @@ enum error_code
 
 class resource_manager_contact
 {
-	const std::string contact_;
+	std::string const contact_;
 public:
-	resource_manager_contact(const std::string &contact)
+	resource_manager_contact(std::string const &contact)
 		: contact_(contact) {}
 
-	resource_manager_contact(char const *const contact)
+	resource_manager_contact(char const *contact)
 		: contact_(contact) {}
 
 	resource_manager_contact(resource_manager_contact const &src)
 		: contact_(src.contact_) {}
 
-	char const *const to_string() const
+	char const *to_string() const
 	{
 		return contact_.c_str();
 	}
@@ -240,7 +240,7 @@ public:
 		return code_ != no_error;
 	}
 
-	char const *const to_string() const
+	char const *to_string() const
 	{
 		return ::globus_gram_client_error_string(code_);
 	}
@@ -269,7 +269,7 @@ public:
 	std::string jobmanager_version() const
 	{
 		globus_hashtable_t extensions(0);
-		const int result(
+		int const result(
 			::globus_gram_client_get_jobmanager_version(
 				contact_.to_string(), &extensions));
 
