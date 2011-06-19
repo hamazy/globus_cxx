@@ -272,6 +272,9 @@ public:
 		const int result(
 			::globus_gram_client_get_jobmanager_version(
 				contact_.to_string(), &extensions));
+		globus::util::on_exit<std::pointer_to_unary_function< ::globus_hashtable_t *,void> > destruction(
+		 	std::ptr_fun(::globus_gram_protocol_hash_destroy), &extensions);
+
 		if (result != GLOBUS_SUCCESS) return std::string();
 		::globus_gram_protocol_extension_t *extension_value =
 			  reinterpret_cast< ::globus_gram_protocol_extension_t *>(
@@ -279,8 +282,6 @@ public:
 					  &extensions,
 					  const_cast<char *>("toolkit-version")));
 		
-		globus::util::on_exit<std::pointer_to_unary_function< ::globus_hashtable_t *,void> > destruction(
-		 	std::ptr_fun(::globus_gram_protocol_hash_destroy), &extensions);
 		if (extension_value == 0) return std::string();
 		return std::string(extension_value->value);
 	}
