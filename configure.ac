@@ -11,10 +11,10 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_CXX
 
 # Checks for libraries.
-AC_CHECK_LIB([globus_gram_client_gcc32dbgpthr], [main])
-AC_CHECK_LIB([globus_common_gcc32dbgpthr], [main])
-AC_CHECK_LIB([globus_gram_protocol_gcc32dbgpthr], [main])
-AC_CHECK_LIB([globus_rsl_gcc32dbgpthr], [main])
+AC_CHECK_LIB([globus_gram_client_gcc32dbg], [main])
+AC_CHECK_LIB([globus_common_gcc32dbg], [main])
+AC_CHECK_LIB([globus_gram_protocol_gcc32dbg], [main])
+AC_CHECK_LIB([globus_rsl_gcc32dbg], [main])
 
 # Checks for header files.
 

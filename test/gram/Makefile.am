@@ -1,9 +1,8 @@
 INCLUDES = -I$(top_builddir)
 
 noinst_PROGRAMS = \
-	gram_ping_example#  \
-	# gram_version_example \
-	# gram_submit_example \
+	gram_ping_example  \
+	gram_submit_example # \
 	# gram_submit_and_wait_example \
 	# gram_poll_example \
 	# gram_refresh_example \
@@ -14,7 +13,7 @@ noinst_PROGRAMS = \
 
 gram_ping_example_SOURCES = gram_ping_example.cpp
 # gram_version_example_SOURCES = gram_version_example.cpp
-# gram_submit_example_SOURCES = gram_submit_example.cpp
+gram_submit_example_SOURCES = gram_submit_example.cpp
 # gram_submit_and_wait_example_SOURCES = gram_submit_and_wait_example.cpp
 # gram_poll_example_SOURCES = gram_poll_example.cpp
 # gram_refresh_example_SOURCES = gram_refresh_example.cpp

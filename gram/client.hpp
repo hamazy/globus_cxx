@@ -6,11 +6,17 @@
 #define GLOBUS_CXX_GRAM_CLIENT_HPP_
 
 #include <functional>
+#include <map>
+
+#include <boost/shared_ptr.hpp>
+#include <boost/bind.hpp>
 
 #include "globus_gram_client.h"
 #include "globus_gram_protocol.h"
 
 #include "common/util.hpp"
+#include "common/thread.hpp"
+#include "gram/protocol.hpp"
 
 namespace globus { namespace gram {
 
@@ -252,14 +258,56 @@ std::ostream &operator<<(std::ostream &stream, error const &exception)
 	return stream;
 }
 
+class job_state_listener
+{
+public:
+	typedef boost::shared_ptr<job_state_listener> pointer;
+	virtual ~job_state_listener() {}
+	virtual void state_chageed(globus::gram::protocol::job_state state, error_code error_code) = 0;
+};
+
+template<typename Handler>
+class job_state_listener_impl
+	: public job_state_listener
+{
+	Handler handler_;
+public:
+	typedef boost::shared_ptr<job_state_listener_impl> pointer;
+	virtual ~job_state_listener_impl() {}
+
+	void state_chageed(globus::gram::protocol::job_state state, error_code error_code)
+	{
+		handler_(state, error_code);
+	}
+	static pointer create(Handler const &handler)
+	{
+		return pointer(new job_state_listener_impl(handler));
+	}
+private:
+	job_state_listener_impl(Handler const &handler)
+		: handler_(handler) {}
+};
+
 class client
 {
 	resource_manager_contact const contact_;
-public:
-	client(resource_manager_contact const &contact)
-		:contact_(contact) {}
 
-	virtual ~client() {}
+public:
+	std::map<std::string,job_state_listener::pointer> job_state_listeners_;
+	globus::thread::mutex mutex_;
+	globus::thread::cond cond_;
+
+	client(resource_manager_contact const &contact)
+		: contact_(contact)
+		, job_state_listeners_()
+		, mutex_()
+		, cond_()
+	{
+	}
+
+	virtual ~client()
+	{
+	}
 
 	error_code ping() const
 	{
@@ -272,12 +320,12 @@ public:
 		int const result(
 			::globus_gram_client_get_jobmanager_version(
 				contact_.to_string(), &extensions));
+		if (result != GLOBUS_SUCCESS) return std::string();
 
 		typedef std::pointer_to_unary_function< ::globus_hashtable_t *,void> function_type;
 		globus::util::on_exit<function_type> destruction(
 		 	std::ptr_fun(::globus_gram_protocol_hash_destroy), &extensions);
 
-		if (result != GLOBUS_SUCCESS) return std::string();
 		::globus_gram_protocol_extension_t const *extension_value =
 			  reinterpret_cast< ::globus_gram_protocol_extension_t *>(
 				  ::globus_hashtable_lookup(
@@ -297,12 +345,71 @@ public:
 		return toolkit_version + " " + gram_version;
 	}
 
+	char const *contact() const
+	{
+		return contact_.to_string();
+	}
+
+	void add_job_state_listener(std::string const &job_contact, job_state_listener::pointer listener)
+	{
+		job_state_listeners_.insert(std::make_pair(job_contact,listener));
+	}
+
+	static void callback(void *arg, char *job_contact, int state, int ec)
+	{
+		client *myself(reinterpret_cast<client *>(arg));
+		if (myself == 0) return;
+		std::map<std::string,job_state_listener::pointer>::iterator found =
+			myself->job_state_listeners_.find(std::string(job_contact));
+		if (found == myself->job_state_listeners_.end()) return;
+		job_state_listener::pointer listener(found->second);
+		listener->state_chageed(
+			static_cast<globus::gram::protocol::job_state>(state),
+			static_cast<error_code>(ec));
+
+		myself->job_state_listeners_.erase(found);
+	}
+
 private:
 	client();
 	client(client const &src);
 	client &operator=(client const &src);
 
 };
+
+template<typename StateChangeListener>
+inline void request_job(client &client, char const *rsl, int state_mask, StateChangeListener const &listener)
+{
+	client.mutex_.lock();
+	typedef std::mem_fun_t<int, globus::thread::mutex> function_type;
+	globus::util::on_exit<function_type> unlock(
+		std::mem_fun(&globus::thread::mutex::unlock), &client.mutex_);
+
+	char *callback_contact(0);
+	int const callback_allowed(::globus_gram_client_callback_allow(&client::callback, &client, &callback_contact));
+	if (callback_allowed != GLOBUS_SUCCESS)
+	{
+		std::cerr << ::globus_gram_client_error_string(callback_allowed) << std::endl;
+		return;
+	}
+
+	char *job_contact(0);
+	int const job_requested(::globus_gram_client_job_request(client.contact(), rsl, state_mask, callback_contact, &job_contact));
+	if (job_requested != GLOBUS_SUCCESS)
+	{
+		std::cerr << ::globus_gram_client_error_string(job_requested) << std::endl;
+		return;
+	}
+	std::cerr << "Job submit successful. job_contact = " << job_contact
+			  << ", callback_contact = " << callback_contact << std::endl;
+
+	client.add_job_state_listener(job_contact, job_state_listener_impl<StateChangeListener>::create(listener));
+
+    while (!client.job_state_listeners_.empty())
+    {
+        client.cond_.wait(client.mutex_);
+    }
+}
 
 } // namespace gram
 } // namespace globus

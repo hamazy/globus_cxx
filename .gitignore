@@ -16,3 +16,4 @@ stamp-h1
 *.o
 *~
 /test/gram/gram_ping_example
+/test/gram/gram_submit_example
