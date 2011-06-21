@@ -320,26 +320,27 @@ template<typename Handler>
 class job_state_listener_op
 {
 	Handler handler_;
-	bool received_;
+	bool terminated_;
 	globus::thread::mutex &mutex_;
 	globus::thread::cond &cond_;
 public:
 	job_state_listener_op(Handler const &handler, globus::thread::mutex &mutex, globus::thread::cond &cond)
 		: handler_(handler)
-		, received_(false)
+		, terminated_(false)
 		, mutex_(mutex)
 		, cond_(cond) {}
 
 	void state_chageed(globus::gram::protocol::job_state state, error_code error_code)
 	{
 		handler_(state, error_code);
-		received_ = true;
+		using namespace globus::gram::protocol;
+		if (state == JOB_STATE_FAILED || state == JOB_STATE_DONE) terminated_ = true;
 	}
 
-	bool received() const
+	bool terminated() const
 	{
 		globus::thread::mutex::scoped_lock lock(mutex_);
-		return received_;
+		return terminated_;
 	}
 
 	static void callback(void *arg, char *job_contact, int state, int ec)
@@ -377,7 +378,7 @@ inline error_code request_job(client &client, char const *rsl, int state_mask, S
 			client.contact(), rsl, state_mask, callback_contact, &job_contact));
 	if (job_requested != GLOBUS_SUCCESS) return static_cast<error_code>(job_requested);
 
-    while (!listener_op.received()) cond.wait(mutex);
+    while (!listener_op.terminated()) cond.wait(mutex);
 	return no_error;
 }
 

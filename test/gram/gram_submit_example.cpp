@@ -24,7 +24,11 @@ public:
 		case JOB_STATE_DONE:
 			std::cout << "JOB_STATE_DONE" << std::endl;
 			break;
+		case JOB_STATE_ACTIVE:
+			std::cout << "JOB_STATE_ACTIVE" << std::endl;
+			break;
 		default:
+			std::cout << "(other state)" << std::endl;
 			break;
 		}
 	}
@@ -52,7 +56,7 @@ int main(const int argc, char const *argv[])
 			globus::gram::request_job(
 				client,
 				argv[2],			// rsl
-				JOB_STATE_FAILED | JOB_STATE_DONE, // listening state
+				JOB_STATE_FAILED | JOB_STATE_DONE | JOB_STATE_ACTIVE, // listening state
 				boost::bind(&state_change_listener::state_changed, &listener, _1, _2))); // callback functor
 		if (error != globus::gram::no_error)
 		{
