@@ -47,11 +47,17 @@ int main(const int argc, char const *argv[])
 		globus::gram::client client(contact);
 
 		state_change_listener const listener;
-		globus::gram::request_job(
-			client,
-			argv[2],			// rsl
-			GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED | GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE, // listening state
-			boost::bind(&state_change_listener::state_changed, &listener, _1, _2)); // callback functor
+		globus::gram::error const error(
+			globus::gram::request_job(
+				client,
+				argv[2],			// rsl
+				GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED | GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE, // listening state
+				boost::bind(&state_change_listener::state_changed, &listener, _1, _2))); // callback functor
+		if (error != globus::gram::no_error)
+		{
+			std::cerr << error << std::endl;
+			return EXIT_FAILURE;
+		}
 	}
 	catch (std::exception const &e)
 	{

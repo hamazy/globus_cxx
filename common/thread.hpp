@@ -9,11 +9,31 @@
 
 namespace globus { namespace thread {
 
+template<typename Mutex>
+class lock_guard
+{
+	Mutex &mutex_;
+public:
+	lock_guard(Mutex &mutex)
+		: mutex_(mutex)
+	{
+		mutex_.lock();
+	}
+	virtual ~lock_guard()
+	{
+		mutex_.unlock();
+	}
+private:
+	lock_guard(lock_guard const &src);
+	lock_guard &operator=(lock_guard const &src);
+};
+
 class mutex
 {
 	friend class cond;
     globus_mutex_t mutex_;
 public:
+	typedef lock_guard<mutex> scoped_lock;
 	mutex()
 		: mutex_()
 	{
@@ -68,7 +88,6 @@ private:
 	cond &operator=(cond const &src);
 
 };
-
 
 }
 }
