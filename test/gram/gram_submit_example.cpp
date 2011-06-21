@@ -46,12 +46,13 @@ int main(const int argc, char const *argv[])
 		globus::gram::resource_manager_contact contact(argv[1]);
 		globus::gram::client client(contact);
 
+		using namespace globus::gram::protocol;
 		state_change_listener const listener;
 		globus::gram::error const error(
 			globus::gram::request_job(
 				client,
 				argv[2],			// rsl
-				GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED | GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE, // listening state
+				JOB_STATE_FAILED | JOB_STATE_DONE, // listening state
 				boost::bind(&state_change_listener::state_changed, &listener, _1, _2))); // callback functor
 		if (error != globus::gram::no_error)
 		{
