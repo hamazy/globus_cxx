@@ -3,6 +3,20 @@ globus_cxx
 
 This is intended to be a thin C++ wrapper for C API of Globus Toolkit.
 
+Prerequisite
+------------
+
+ * Globus Toolkit 5
+ * Boost
+ * Autotools
+
+Tested under the environment blow:
+
+ * Mac OS X 10.6.7
+ * Globus Tookit 5.0.4
+ * Boost 1.46.1 (installed via MacPorts)
+ * Autoconf 2.68, automake 1.11.1
+
 Build
 -----
 
@@ -13,7 +27,13 @@ Build
 Run
 ---
 
+ $ export GLOBUS_LOCATION=/opt/gt5
+ $ source $GLOBUS_LOCATION/etc/globus-user-env.sh
  $ grid-proxy-init
 
  $ cd test/gram
- $ LD_LIBRARY_PATH=/opt/gt5/lib ./gram_ping_example `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local 
+ $ ./gram_ping_example \
+ > `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local 
+ $ ./gram_submit_example \
+ > `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local \
+ > "&(executable=/bin/date)"
