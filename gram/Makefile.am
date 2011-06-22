@@ -1,1 +1,3 @@
-noinst_HEADERS =
+noinst_HEADERS = \
+	client.hpp \
+	protocol.hpp
