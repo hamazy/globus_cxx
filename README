@@ -3,19 +3,25 @@ globus_cxx
 
 This is intended to be a thin C++ wrapper for C API of Globus Toolkit.
 
+Sample programs under test/gram/ directory are mostly ported from
+the ones available in Developer's Guide of GT 5.0.4 GRAM5 [1].
+
+[1] http://www.globus.org/toolkit/docs/5.0/5.0.4/execution/gram5/developer/
+
 Prerequisite
 ------------
 
  * Globus Toolkit 5
  * Boost
  * Autotools
+ * POSIX thread
 
 Tested under the environment blow:
 
  * Mac OS X 10.6.7
  * Globus Tookit 5.0.4
  * Boost 1.46.1 (installed via MacPorts)
- * Autoconf 2.68, automake 1.11.1
+ * Autoconf 2.68, automake 1.11.1 (installed via MacPorts)
 
 Build
 -----
