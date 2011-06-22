@@ -5,6 +5,7 @@
 #include "common/module.hpp"
 #include "gram/client.hpp"
 #include "gram/protocol.hpp"
+#include "rsl.hpp"
 
 namespace  {
 
@@ -47,6 +48,7 @@ int main(const int argc, char const *argv[])
 	try
 	{
 		globus::module gram_client_module(*GLOBUS_GRAM_CLIENT_MODULE);
+		globus::module gram_rsl_module(*GLOBUS_RSL_MODULE);
 		globus::gram::resource_manager_contact contact(argv[1]);
 		globus::gram::client client(contact);
 

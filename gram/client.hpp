@@ -259,7 +259,7 @@ class client
 	resource_manager_contact const contact_;
 
 public:
-	client(resource_manager_contact const &contact)
+	explicit client(resource_manager_contact const &contact)
 		: contact_(contact)
 	{
 	}
@@ -333,13 +333,14 @@ public:
 	void state_chageed(globus::gram::protocol::job_state state, error_code error_code)
 	{
 		handler_(state, error_code);
+
+		globus::thread::mutex::scoped_lock lock(mutex_);
 		using namespace globus::gram::protocol;
 		if (state == JOB_STATE_FAILED || state == JOB_STATE_DONE) terminated_ = true;
 	}
 
 	bool terminated() const
 	{
-		globus::thread::mutex::scoped_lock lock(mutex_);
 		return terminated_;
 	}
 
@@ -348,7 +349,6 @@ public:
 		job_state_listener_op *myself(reinterpret_cast<job_state_listener_op *>(arg));
 		if (myself == 0) return;
 
-		globus::thread::mutex::scoped_lock lock(myself->mutex_);
 		myself->state_chageed(
 			static_cast<globus::gram::protocol::job_state>(state),
 			static_cast<error_code>(ec));
@@ -360,8 +360,6 @@ template<typename StateChangeListener>
 inline error_code request_job(client &client, char const *rsl, int state_mask, StateChangeListener const &listener)
 {
 	globus::thread::mutex mutex;
-	globus::thread::mutex::scoped_lock lock(mutex);
-
 	globus::thread::cond cond;
 	job_state_listener_op<StateChangeListener> listener_op(listener, mutex, cond);
 
@@ -378,6 +376,11 @@ inline error_code request_job(client &client, char const *rsl, int state_mask, S
 			client.contact(), rsl, state_mask, callback_contact, &job_contact));
 	if (job_requested != GLOBUS_SUCCESS) return static_cast<error_code>(job_requested);
 
+	typedef std::pointer_to_unary_function<void *,void> function_type;
+	globus::util::on_exit<function_type> free_contact(
+		std::ptr_fun(::free), job_contact);
+
+	globus::thread::mutex::scoped_lock lock(mutex);
     while (!listener_op.terminated()) cond.wait(mutex);
 	return no_error;
 }
