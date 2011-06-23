@@ -44,6 +44,7 @@ public:
 
 		globus::thread::mutex::scoped_lock lock(mutex_);
 		--pending_jobs_;
+		cond_.signal();
 	}
 };
 
