@@ -324,12 +324,7 @@ public:
 	typedef globus::thread::cond cond;
 };
 
-class non_blocking
-{
-public:
-	typedef globus::thread::null_mutex mutex;
-	typedef globus::thread::null_cond cond;
-};
+class non_blocking;
 
 template<typename Handler, typename Synchronization>
 class listen_state_op
@@ -347,15 +342,15 @@ public:
 
 	~listen_state_op()
 	{
-		globus::thread::mutex::scoped_lock lock(mutex_);
+		typename Synchronization::mutex::scoped_lock lock(mutex_);
 		while (listening_) cond_.wait(mutex_);
 	}
 
-	void state_chageed(globus::gram::protocol::job_state state, error_code error_code)
+	void state_chaged(globus::gram::protocol::job_state state, error_code error_code)
 	{
 		handler_(state, error_code);
 
-		globus::thread::mutex::scoped_lock lock(mutex_);
+		typename Synchronization::mutex::scoped_lock lock(mutex_);
 		using namespace globus::gram::protocol;
 		if (state == JOB_STATE_FAILED || state == JOB_STATE_DONE)
 		{
@@ -372,7 +367,37 @@ public:
 		listen_state_op *myself(reinterpret_cast<listen_state_op *>(arg));
 		if (myself == 0) return;
 
-		myself->state_chageed(
+		myself->state_chaged(
+			static_cast<globus::gram::protocol::job_state>(state),
+			static_cast<error_code>(ec));
+	}
+};
+
+template<typename Handler>
+class listen_state_op<Handler, non_blocking>
+{
+	Handler handler_;
+	bool listening_;
+public:
+	listen_state_op(Handler const &handler)
+		: handler_(handler)
+		, listening_(false) {}
+
+	~listen_state_op() {}
+
+	void state_chaged(globus::gram::protocol::job_state state, error_code error_code)
+	{
+		handler_(state, error_code);
+		using namespace globus::gram::protocol;
+		if (state == JOB_STATE_FAILED || state == JOB_STATE_DONE) delete this;
+	}
+
+	static void callback(void *arg, char *job_contact, int state, int ec)
+	{
+		listen_state_op *myself(reinterpret_cast<listen_state_op *>(arg));
+		if (myself == 0) return;
+
+		myself->state_chaged(
 			static_cast<globus::gram::protocol::job_state>(state),
 			static_cast<error_code>(ec));
 	}
@@ -447,6 +472,42 @@ inline error_code async_submit_job(client const &client, char const *rsl, Callba
 			client.contact(), rsl, 0, 0, 0, &job_submit_op<Callback>::callback, op));
 	if (job_requested != GLOBUS_SUCCESS)
 	{
+		delete op;
+		return static_cast<error_code>(job_requested);
+	}
+	return no_error;
+}
+
+template<typename JobSubmitCallback, typename StateChangeCallback>
+inline error_code async_submit_job(client const &client, std::string const &rsl, JobSubmitCallback const &job_submit_callback, int state_mask, StateChangeCallback const &state_chage_callback)
+{
+	return async_submit_job(client, rsl.c_str(), job_submit_callback, state_mask, state_chage_callback);
+}
+
+template<typename JobSubmitCallback, typename StateChangeCallback>
+inline error_code async_submit_job(client const &client, char const *rsl, JobSubmitCallback const &job_submit_callback, int state_mask, StateChangeCallback const &state_chage_callback)
+{
+	typedef listen_state_op<StateChangeCallback, non_blocking> listen_state_op_type;
+	listen_state_op_type *listener_op = new listen_state_op_type(state_chage_callback);
+
+	char *callback_contact(0);
+	int const callback_allowed(
+		::globus_gram_client_callback_allow(
+			&listen_state_op<StateChangeCallback, non_blocking>::callback,
+			listener_op, &callback_contact));
+	if (callback_allowed != GLOBUS_SUCCESS)
+	{
+		delete listener_op;
+		return static_cast<error_code>(callback_allowed);
+	}
+
+	job_submit_op<JobSubmitCallback> *op = new job_submit_op<JobSubmitCallback>(job_submit_callback);
+	int const job_requested(
+		::globus_gram_client_register_job_request(
+			client.contact(), rsl, state_mask, callback_contact, 0, &job_submit_op<JobSubmitCallback>::callback, op));
+	if (job_requested != GLOBUS_SUCCESS)
+	{
+		delete listener_op;
 		delete op;
 		return static_cast<error_code>(job_requested);
 	}
