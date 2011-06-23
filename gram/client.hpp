@@ -317,19 +317,39 @@ private:
 
 };
 
-template<typename Handler>
-class job_state_listener_op
+class blocking
+{
+public:
+	typedef globus::thread::mutex mutex;
+	typedef globus::thread::cond cond;
+};
+
+class non_blocking
+{
+public:
+	typedef globus::thread::null_mutex mutex;
+	typedef globus::thread::null_cond cond;
+};
+
+template<typename Handler, typename Synchronization>
+class listen_state_op
 {
 	Handler handler_;
-	bool terminated_;
-	globus::thread::mutex &mutex_;
-	globus::thread::cond &cond_;
+	bool listening_;
+	typename Synchronization::mutex mutex_;
+	typename Synchronization::cond cond_;
 public:
-	job_state_listener_op(Handler const &handler, globus::thread::mutex &mutex, globus::thread::cond &cond)
+	listen_state_op(Handler const &handler)
 		: handler_(handler)
-		, terminated_(false)
-		, mutex_(mutex)
-		, cond_(cond) {}
+		, listening_(false)
+		, mutex_()
+		, cond_() {}
+
+	~listen_state_op()
+	{
+		globus::thread::mutex::scoped_lock lock(mutex_);
+		while (listening_) cond_.wait(mutex_);
+	}
 
 	void state_chageed(globus::gram::protocol::job_state state, error_code error_code)
 	{
@@ -337,52 +357,54 @@ public:
 
 		globus::thread::mutex::scoped_lock lock(mutex_);
 		using namespace globus::gram::protocol;
-		if (state == JOB_STATE_FAILED || state == JOB_STATE_DONE) terminated_ = true;
+		if (state == JOB_STATE_FAILED || state == JOB_STATE_DONE)
+		{
+			listening_ = false;
+			cond_.signal();
+		}
 	}
 
-	bool terminated() const
-	{
-		return terminated_;
-	}
+	void listen() { listening_ = true; }
+	void cancel() { listening_ = false; }
 
 	static void callback(void *arg, char *job_contact, int state, int ec)
 	{
-		job_state_listener_op *myself(reinterpret_cast<job_state_listener_op *>(arg));
+		listen_state_op *myself(reinterpret_cast<listen_state_op *>(arg));
 		if (myself == 0) return;
 
 		myself->state_chageed(
 			static_cast<globus::gram::protocol::job_state>(state),
 			static_cast<error_code>(ec));
-		myself->cond_.signal();
 	}
 };
 
 template<typename StateChangeListener>
 inline error_code submit_job_wait_until(client const &client, char const *rsl, int state_mask, StateChangeListener const &listener)
 {
-	globus::thread::mutex mutex;
-	globus::thread::cond cond;
-	job_state_listener_op<StateChangeListener> listener_op(listener, mutex, cond);
+	listen_state_op<StateChangeListener, blocking> listener_op(listener);
 
 	char *callback_contact(0);
 	int const callback_allowed(
 		::globus_gram_client_callback_allow(
-			&job_state_listener_op<StateChangeListener>::callback,
+			&listen_state_op<StateChangeListener, blocking>::callback,
 			&listener_op, &callback_contact));
 	if (callback_allowed != GLOBUS_SUCCESS) return static_cast<error_code>(callback_allowed);
+	listener_op.listen();
 
 	char *job_contact(0);
 	int const job_requested(
 		::globus_gram_client_job_request(
 			client.contact(), rsl, state_mask, callback_contact, &job_contact));
-	if (job_requested != GLOBUS_SUCCESS) return static_cast<error_code>(job_requested);
+	if (job_requested != GLOBUS_SUCCESS)
+	{
+		listener_op.cancel();
+		return static_cast<error_code>(job_requested);
+	}
 
 	typedef std::pointer_to_unary_function<void *,void> function_type;
 	globus::util::on_exit<function_type> free_contact(
 		std::ptr_fun(::free), job_contact);
 
-	globus::thread::mutex::scoped_lock lock(mutex);
-    while (!listener_op.terminated()) cond.wait(mutex);
 	return no_error;
 }
 

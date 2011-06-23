@@ -58,9 +58,24 @@ private:
 
 };
 
+class null_mutex
+{
+public:
+	typedef lock_guard<null_mutex> scoped_lock;
+	null_mutex() {}
+	virtual ~null_mutex() {}
+	int lock() { return 0; }
+	int unlock() { return 0; }
+private:
+	null_mutex(null_mutex const &src);
+	null_mutex &operator=(null_mutex const &src);
+};
+
+
 class cond
 {
     globus_cond_t cond_;
+	typedef mutex mutex_type;
 public:
 	cond()
 		: cond_()
@@ -73,7 +88,7 @@ public:
 		globus_cond_destroy(&cond_);
 	}
 
-	void wait(mutex &mutex)
+	void wait(mutex_type &mutex)
 	{
 		globus_cond_wait(&cond_, &mutex.mutex_);
 	}
@@ -86,6 +101,24 @@ public:
 private:
 	cond(cond const &src);
 	cond &operator=(cond const &src);
+
+};
+
+class null_cond
+{
+	typedef null_mutex mutex_type;
+public:
+	void wait(mutex_type &)
+	{
+	}
+
+	void signal()
+	{
+	}
+
+private:
+	null_cond(null_cond const &src);
+	null_cond &operator=(null_cond const &src);
 
 };
 
