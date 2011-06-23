@@ -6,6 +6,7 @@
 #define GLOBUS_CXX_GRAM_CLIENT_HPP_
 
 #include <functional>
+#include <string>
 
 #include "globus_gram_client.h"
 #include "globus_gram_protocol.h"
@@ -357,7 +358,7 @@ public:
 };
 
 template<typename StateChangeListener>
-inline error_code request_job(client &client, char const *rsl, int state_mask, StateChangeListener const &listener)
+inline error_code request_job(client const &client, char const *rsl, int state_mask, StateChangeListener const &listener)
 {
 	globus::thread::mutex mutex;
 	globus::thread::cond cond;
@@ -382,6 +383,51 @@ inline error_code request_job(client &client, char const *rsl, int state_mask, S
 
 	globus::thread::mutex::scoped_lock lock(mutex);
     while (!listener_op.terminated()) cond.wait(mutex);
+	return no_error;
+}
+
+template<typename Callback>
+class job_submit_op
+{
+	Callback const callback_;
+public:
+	job_submit_op(Callback const &callback)
+		: callback_(callback) {}
+
+	void callback(error_code operation_error_code, char const *job_contact)
+	{
+		callback_(operation_error_code, job_contact);
+	}
+
+	static void callback(void *arg, globus_gram_protocol_error_t operation_failure_code, char const *job_contact, globus_gram_protocol_job_state_t job_state, globus_gram_protocol_error_t job_failure_code)
+	{
+		job_submit_op *myself(reinterpret_cast<job_submit_op *>(arg));
+		if (myself == 0) return;
+		myself->callback(
+			static_cast<error_code>(operation_failure_code),
+			job_contact);
+		delete myself;
+	}
+};
+
+template<typename Callback>
+inline error_code async_submit_job(client const &client, std::string const &rsl, Callback const &callback)
+{
+	return async_submit_job(client, rsl.c_str(), callback);
+}
+
+template<typename Callback>
+inline error_code async_submit_job(client const &client, char const *rsl, Callback const &callback)
+{
+	job_submit_op<Callback> *op = new job_submit_op<Callback>(callback);
+	int const job_requested(
+		::globus_gram_client_register_job_request(
+			client.contact(), rsl, 0, 0, 0, &job_submit_op<Callback>::callback, op));
+	if (job_requested != GLOBUS_SUCCESS)
+	{
+		delete op;
+		return static_cast<error_code>(job_requested);
+	}
 	return no_error;
 }
 

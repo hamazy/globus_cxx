@@ -43,3 +43,6 @@ Run
  $ ./gram_submit_example \
  > `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local \
  > "&(executable=/bin/date)"
+ $ ./gram_async_submit_example \
+ > `hostname`:2119/jobmanager:/O=Grid/OU=GlobusTest/CN=host/suguru-hamazakis-macbook-air.local \
+ > "&(executable=/bin/date)" "&(executable=/bin/date)" "&(executable=/bin/date)" 
