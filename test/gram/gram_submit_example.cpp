@@ -55,7 +55,7 @@ int main(const int argc, char const *argv[])
 		using namespace globus::gram::protocol;
 		state_change_listener const listener;
 		globus::gram::error const error(
-			globus::gram::request_job(
+			globus::gram::submit_job_wait_until(
 				client,
 				argv[2],			// rsl
 				JOB_STATE_FAILED | JOB_STATE_DONE | JOB_STATE_ACTIVE, // listening state

@@ -358,7 +358,7 @@ public:
 };
 
 template<typename StateChangeListener>
-inline error_code request_job(client const &client, char const *rsl, int state_mask, StateChangeListener const &listener)
+inline error_code submit_job_wait_until(client const &client, char const *rsl, int state_mask, StateChangeListener const &listener)
 {
 	globus::thread::mutex mutex;
 	globus::thread::cond cond;
